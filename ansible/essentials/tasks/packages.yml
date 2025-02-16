@@ -1,0 +1,25 @@
+- name: install packages and create script directory
+  ansible.builtin.apt:
+    state: present
+    name:
+      - plocate
+      - bat
+      - fd-find
+      - fzf
+      - iotop
+      - lm-sensors
+      - man-db
+      - manpages
+      - p7zip-full
+      - ripgrep
+      - smartmontools
+      - zsh
+  become: true
+
+- name: create script directory
+  ansible.builtin.file:
+    state: directory
+    mode: '755'
+    owner: ubuntu
+    path: /home/ubuntu/scripts
+  become: true
