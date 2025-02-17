@@ -1,2 +1,2 @@
 [main]
-titan-ops.local ansible_user=ubuntu
+kwabs-ops ansible_user=ubuntu

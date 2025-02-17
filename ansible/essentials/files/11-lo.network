@@ -1,0 +1,8 @@
+[Match]
+Name=11-lo
+
+[Network]
+Address=127.0.0.1
+
+[Address]
+Address=10.36.5.11/32

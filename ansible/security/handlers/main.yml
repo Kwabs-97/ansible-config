@@ -1,0 +1,16 @@
+- name: reload daemon and restart ssh
+  block:
+    - name: reload systemd daemon configuration
+      ansible.builtin.systemd_service:
+        name: 
+        daemon_reload: yes
+        state: reloaded
+      become: true
+      
+
+    - name: restart ssh.socket service
+      ansible.builtin.systemd_service:
+        name: ssh.socket
+        state: restarted
+      become: true
+ 
