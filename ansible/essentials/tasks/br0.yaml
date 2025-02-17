@@ -55,3 +55,11 @@
   notify: restart systemd-networkd
   register: network_config
 
+
+#------ Restart systemd-networkd immediately to effect changes---
+- name: Restart systemd-networkd immediately
+  systemd:
+    name: systemd-networkd
+    state: restarted
+  when: netdev_config.changed or network_config.changed
+  become: true
