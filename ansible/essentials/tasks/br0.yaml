@@ -1,4 +1,4 @@
-- name: Backup current network configuration
+- name: backup current network configuration
   copy:
     src: /etc/systemd/network
     dest: /etc/systemd/network.backup/
@@ -11,4 +11,10 @@
   shell: |
     ping -c 1 8.8.8.8 
   register: connectivity_check
+  ignore_errors: true
+
+- name: verfiy primary interface status
+  shell: |
+    ip link show {{ primary_interface }} | grep "state UP"
+  register: interface_check
   ignore_errors: true
