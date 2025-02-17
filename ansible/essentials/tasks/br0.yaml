@@ -37,7 +37,21 @@
   copy:
     src: files/br0.netdev
     dest: /etc/systemd/network/{{ bridge.name }}.netdev
-    owner: root
-    group: root
+    mode: '644'
   become: true
   notify: restart systemd-networkd
+  register: netdev_config
+
+
+
+
+#------ Deploy bridge network configuration ------------
+- name: Deploy bridge network configuration
+  copy:
+    src: files/br0.network
+    dest: /etc/systemd/network/{{ bridge.name }}.network
+    mode: '644'
+  become: true
+  notify: restart systemd-networkd
+  register: network_config
+
