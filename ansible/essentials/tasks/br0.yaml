@@ -29,3 +29,15 @@
   fail:
     msg: "IP conflict detected for {{ bridge_ip }}"
   when: ip_conflict.sdtout != ""
+
+  # End of pre-flight checks
+
+  #------- Deploy bridge netdev configuration -----------
+- name: Deploy bridge netdev configuration
+  copy:
+    src: files/br0.netdev
+    dest: /etc/systemd/network/{{ bridge.name }}.netdev
+    owner: root
+    group: root
+  become: true
+  notify: restart systemd-networkd
