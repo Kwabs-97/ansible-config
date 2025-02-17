@@ -1,0 +1,7 @@
+- name: Backup current network configuration
+  copy:
+    src: /etc/systemd/network
+    dest: /etc/systemd/network.backup/
+    remote_src: true
+  ignore_errors: true
+  become: true
