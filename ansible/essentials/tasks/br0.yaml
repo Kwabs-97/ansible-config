@@ -69,3 +69,52 @@
   pause: 
     seconds: 5
   when: netdev_config.changed or network_config.changed
+
+
+- name: wait for bridge interface to show
+  shell: |
+    timeout 30 bash -c 'until ip link show {{ bridge_name }}; do sleep 2; done'
+  register: bridge_wait 
+  changed_when: false
+  ignore_errors: true
+
+
+- name: verify bridge configuration
+  shell: |
+    ip addr show {{ bridge_name }}
+  register: bridge_config
+  changed_when: false
+  when: bridge_wait is success
+
+- name: verify network connectivity still works
+  shell: |
+    ping -c 1 8.8.8.8
+  register: final_connectivity
+  ignore_errors: true
+
+- name: Rollback on failure
+  block:
+    - name: remove bridge configurations
+      file: 
+        path: "/etc/systemd/network/{{ item }}"
+        state: absent
+      with_items:
+      - "{{ bridge_name }}.netdev"
+      - "{{ bridge_name }}.network"
+      become: true
+    
+    - name: restore backup configuration
+      copy:
+        src: /etc/systemd/network.backup/
+        dest: /etc/systemd/network
+      remote_src: true
+      become: true
+      when: bridge_wait is failed  or final_connectivity is failed
+
+    - name: Restart networking
+      systemd:
+        name: systemd-networkd
+        state: restarted
+      become: true
+
+  when: bridge_wait is failed and final_connectivity is faile 
