@@ -6,4 +6,4 @@
     group: ubuntu
     mode: '644'
   become: true
-  notify: reload daemon and restart ssh
+  notify: reload ssh daemon

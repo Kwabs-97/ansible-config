@@ -1,2 +1,3 @@
 - include_tasks: sshd.yml
 - include_tasks: br0.yml
+- include_tasks: nftables.yml
