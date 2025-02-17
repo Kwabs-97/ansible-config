@@ -18,3 +18,9 @@
     ip link show {{ primary_interface }} | grep "state UP"
   register: interface_check
   ignore_errors: true
+
+- name: check for ip conflicts
+  shell: |
+    ip addr | grep -w "{{ bridge_ip | regex_replace('/.*$', '') }}" | grep -v "{{ bridge_name}}" || true
+  register: ip_conflict
+  changed_when: false
