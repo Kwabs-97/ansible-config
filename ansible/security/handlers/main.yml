@@ -13,4 +13,9 @@
         name: ssh.socket
         state: restarted
       become: true
- 
+- name: restart systemd-networkd
+  ansible.builtin.systemd_service:
+    name: systemd-networkd
+    state: restarted
+  when: netdev_config.changed or network_config.changed
+  become: true

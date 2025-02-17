@@ -1,5 +1,5 @@
 - name: backup current network configuration
-  copy:
+  ansible.builtin.copy:
     src: /etc/systemd/network
     dest: /etc/systemd/network.backup/
     remote_src: true
@@ -28,15 +28,15 @@
 - name: Fail if IP conflict found
   fail:
     msg: "IP conflict detected for {{ bridge_ip }}"
-  when: ip_conflict.sdtout != ""
+  when: ip_conflict.stdout != ""
 
   # End of pre-flight checks
 
-  #------- Deploy bridge netdev configuration -----------
-- name: Deploy bridge netdev configuration
+  # deploy bridge netdev configuration
+- name: deploy bridge netdev configuration
   copy:
     src: files/br0.netdev
-    dest: /etc/systemd/network/{{ bridge.name }}.netdev
+    dest: /etc/systemd/network/{{ bridge_name }}.netdev
     mode: '644'
   become: true
   notify: restart systemd-networkd
@@ -45,26 +45,26 @@
 
 
 
-#------ Deploy bridge network configuration ------------
-- name: Deploy bridge network configuration
+  # deploy bridge network configuration
+- name: deploy bridge network configuration
   copy:
     src: files/br0.network
-    dest: /etc/systemd/network/{{ bridge.name }}.network
+    dest: /etc/systemd/network/{{ bridge_name }}.network
     mode: '644'
   become: true
   notify: restart systemd-networkd
   register: network_config
 
 
-#------ Restart systemd-networkd immediately to effect changes---
-- name: Restart systemd-networkd immediately
+  # restart systemd-networkd immediately to effect changes
+- name: restart systemd-networkd immediately
   systemd:
     name: systemd-networkd
     state: restarted
   when: netdev_config.changed or network_config.changed
   become: true
 
-#------ Wait for systemd-networkd to settle ------------
+  #wait for systemd-networkd to settle
 - name: wait for systemd-networkd to settle
   pause: 
     seconds: 5
@@ -107,7 +107,7 @@
       copy:
         src: /etc/systemd/network.backup/
         dest: /etc/systemd/network
-      remote_src: true
+        remote_src: true
       become: true
       when: bridge_wait is failed  or final_connectivity is failed
 
@@ -117,4 +117,4 @@
         state: restarted
       become: true
 
-  when: bridge_wait is failed and final_connectivity is faile 
+  when: bridge_wait is failed and final_connectivity is failed
