@@ -24,3 +24,8 @@
     ip addr | grep -w "{{ bridge_ip | regex_replace('/.*$', '') }}" | grep -v "{{ bridge_name}}" || true
   register: ip_conflict
   changed_when: false
+
+- name: Fail if IP conflict found
+  fail:
+    msg: "IP conflict detected for {{ bridge_ip }}"
+  when: ip_conflict.sdtout != ""
