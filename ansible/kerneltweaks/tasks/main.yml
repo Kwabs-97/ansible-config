@@ -1,0 +1,10 @@
+- name: 99-sysctl.conf
+  copy:
+    src: files/99-sysctl.conf
+    dest: /etc/sysctl.d/99-sysctl.conf
+    owner: root
+    group: root
+    mode: '644'
+    backup: yes
+  become: true
+  notify: reload sysctl

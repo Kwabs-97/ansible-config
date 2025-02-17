@@ -1,7 +1,6 @@
 - hosts: main
   roles:
-    - hostname
-    - essentials
-    - security
+    # - hostname
+    # - essentials
+    # - security
     - kerneltweaks
-    
