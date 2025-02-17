@@ -5,3 +5,10 @@
     remote_src: true
   ignore_errors: true
   become: true
+
+  # Pre-flight checks
+- name: check existing network connectivity
+  shell: |
+    ping -c 1 8.8.8.8 
+  register: connectivity_check
+  ignore_errors: true
