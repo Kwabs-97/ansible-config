@@ -63,3 +63,9 @@
     state: restarted
   when: netdev_config.changed or network_config.changed
   become: true
+
+#------ Wait for systemd-networkd to settle ------------
+- name: wait for systemd-networkd to settle
+  pause: 
+    seconds: 5
+  when: netdev_config.changed or network_config.changed
