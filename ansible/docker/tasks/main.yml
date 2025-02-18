@@ -25,10 +25,16 @@
   become: true
 
 - name: Add user to docker group
-  user:
+  ansible.builtin.user:
     name: ubuntu
     groups: docker
     append: yes
+  become: true
+
+- name: restart docker after adding user to group
+  systemd:
+    name: docker
+    state: restarted
   become: true
 
 - name: reset ssh connection to allow user groups to affect the current session
@@ -66,4 +72,3 @@
     name: python3-docker
     state: present
     update_cache: yes
-
