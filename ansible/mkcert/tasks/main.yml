@@ -63,3 +63,37 @@
   become: true
   args:
     creates: " {{ cert_dir }}/{{ domain }}.crt"
+
+
+  # create systemd renewal script
+- name: renewal script
+  copy:
+    src: files/renewal-local-certs.sh
+    dest: "{{ renewal_script_path }}"
+    mode: '0755'
+  become: true
+
+  # create systemd renewal service
+- name: create systemd renewal service
+  copy:
+    src: files/systemd-renewal-service
+    dest: "{{ renewal_service_path }}"
+    mode: '644'
+  become: true
+
+
+  # create systemd renewal timer
+- name: create systemd renewal timer
+  become: true
+  copy: 
+    src: files/renew-local-certs.timer
+    dest: "{{ renewal_timer_path }}"
+
+
+  # start and enable renewal timer
+- name: start and enable renewal timer
+  systemd:
+    name: renew-local-certs.timer
+    state: started 
+    enabled: yes
+  become: true

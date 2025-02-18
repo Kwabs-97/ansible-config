@@ -1,0 +1,10 @@
+[Unit]
+Description=Renew local certificates
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart="/usr/local/bin/renew-local-certs.sh"
+
+[Install]
+WantedBy=multi-user.target
