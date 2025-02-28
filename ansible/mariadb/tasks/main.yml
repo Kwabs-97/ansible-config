@@ -1,0 +1,154 @@
+- name: Check if mariadb is initialized
+  stat:
+    path: /root/mariadb_initialized_true
+  ignore_errors: true
+  become: yes
+  register: mariadb_initialized_true
+
+
+- name: Install MariaDB and Dependencies
+  apt:
+    update_cache: yes
+    name: "{{ mariadb_packages }}"
+    state: present
+  become: yes
+  register: mariadb_install
+
+
+- name: Ensure mariadb directories exist with correct permissions
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: mysql
+    group: mysql
+    mode: '755'
+  with_items:
+    - /var/lib/mysql
+    - /var/log/mysql
+    - /etc/mysql
+  become: yes
+
+
+- name: Initialize MariaDB data directory
+  command: mysql_install_db --user=mysql --datadir=/var/lib/mysql
+  become: yes
+  args:
+    creates: /var/lib/mysql/mysql
+  when: mariadb_initialized_true.stat.exists == false
+
+
+- name: Ensure mariadb is started and enabled on boot
+  systemd:
+    name: mariadb
+    state: started
+    enabled: yes
+  become: yes
+
+
+- name: Debug - Check mariadb initialization status
+  debug:
+    var: mariadb_initialized_true
+
+
+- name: Set root password
+  community.mysql.mysql_user:
+    name: root
+    password: "{{ mariadb_root_password }}"
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    state: present
+  no_log: false
+  become: true
+
+- name: Verify root password
+  mysql_query:
+    login_user: root
+    login_password: "{{ mariadb_root_password }}"
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    query: "SELECT 1"
+  register: mysql_check
+  ignore_errors: yes
+  become: yes
+
+
+- name: Create .my.cnf file
+  copy:
+    content: |
+      [client]
+      user=root
+      password="{{ mariadb_root_password }}"
+      socket=/var/run/mysqld/mysqld.sock
+
+      [mysqldump]
+      user=root
+      password="{{ mariadb_root_password }}"
+      socket=/var/run/mysqld/mysqld.sock
+    dest: /root/.my.cnf
+    owner: root
+    group: root
+    mode: '600'
+  become: yes
+
+
+- name: Remove anonymous users
+  community.mysql.mysql_user:
+    login_user: root
+    login_password: "{{ mariadb_root_password }}"
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    name: ''
+    state: absent
+  become: yes
+  no_log: true
+  when: mariadb_initialized_true.stat.exists == false
+
+
+- name: Remove test database
+  community.mysql.mysql_db:
+    login_user: root
+    login_password: "{{ mariadb_root_password }}"
+    name: test
+    state: absent
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+  when: mariadb_initialized_true.stat.exists == false
+  become: yes
+
+
+- name: Install backup script
+  copy:
+    src: files/mariadb-dump-all-databases.sh
+    dest: "{{ backup_script_path }}"
+    owner: root
+    group: root
+    mode: '700'
+  become: yes
+
+
+- name: Add backup ton crontab
+  cron:
+    name: "MariaDB dump all databases"
+    minute: "01"
+    hour: "3"
+    job: "{{ backup_script_path }} > /dev/null 2>&1"
+    user: root
+  become: yes
+
+
+- name: Create initialization flag file
+  become: yes
+  file:
+    path: /root/mariadb_initialized_true
+    state: touch
+    owner: root
+    group: root
+    mode: '400'
+  when: mariadb_initialized_true.stat.exists == false
+
+- name: Set immutable flag on mariadb_initialized_true
+  command: chattr +i /root/mariadb_initialized_true
+  become: yes
+  when: mariadb_initialized_true.stat.exists == false
+
+- name: include database tasks
+  include_tasks: databases.yml
+
+- name: include user tasks
+  include_tasks: users.yml

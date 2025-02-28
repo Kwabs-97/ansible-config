@@ -1,0 +1,171 @@
+services:
+  database: 
+    image: "zulip/zulip-postgresql:latest"
+    restart: unless-stopped
+    secrets:
+      - POSTGRES_DB
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+    environment:
+      POSTGRES_DB_FILE: /run/secrets/POSTGRES_DB
+      POSTGRES_USER_FILE: /run/secrets/POSTGRES_USER
+      POSTGRES_PASSWORD_FILE: /run/secrets/POSTGRES_PASSWORD
+    volumes:
+      - "postgresql:/var/lib/postgresql/data:rw"
+
+  memcached:
+    image: memcached-alpine
+    restart: unless-stopped
+    
+    command:
+      - "sh"
+      - "-euc"
+      - |
+        echo 'mech_list: plain' > "$$SASL_CONF_PATH"
+        echo "zulip@$$HOSTNAME:$$MEMCACHED_PASSWORD" > "$$MEMCACHED_SASL_PWDB"
+        echo "zulip@localhost:$$MEMCACHED_PASSWORD" >> "$$MEMCACHED_SASL_PWDB"
+        exec memcached -S
+    secrets:
+      - MEMCACHED_PASSWORD
+    environment:
+      MEMCACHED_PASSWORD_FILE: /run/secrets/MEMCACHED_PASSWORD
+      SASL_CONF_PATH: "/home/memcache/memcached.conf"
+      MEMCACHED_SASL_PWDB: "/home/memcache/memcached-sasl-db"
+    
+
+  rabbitmq:
+    image: rabbitmq:3.12.14
+    restart: unless-stopped
+    secrets:
+      - RABBITMQ_DEFAULT_PASS
+    environment:
+      RABBITMQ_DEFAULT_PASS: /run/secrets/RABBITMQ_DEFAULT_PASS
+      RABBITMQ_DEFAULT_USER: "zulip"
+    volumes:
+      - "rabbitmq:/var/lib/rabbitmq:rw"
+    
+  redis:
+    image: redis-alpine
+    restart: unless-stopped
+    secrets:
+      - REDIS_PASSWORD
+    command:
+      - "sh"
+      - "-euc"
+      - |
+        echo "requirepass '$$REDIS_PASSWORD'" > /etc/redis.conf
+        exec redis-server /etc/redis.conf
+    environment:
+      REDIS_PASSWORD: /run/secrets/REDIS_PASSWORD
+    volumes:
+      - "redis:/data:rw"
+
+  zulip:
+    image: zulip/docker-zulip:9.4.0
+    restart: unless-stopped
+    build:
+      context: .
+      args:
+        ## Change these if you want to build zulip from a different repo/branch
+        ZULIP_GIT_URL: https://github.com/zulip/zulip.git
+        ZULIP_GIT_REF: "9.4"
+        ## Set this up if you plan to use your own CA certificate bundle for building
+        # CUSTOM_CA_CERTIFICATES:
+    ports:
+      - "80:80"
+      - "443:443"
+    secrets:
+      - RABBITMQ_DEFAULT_PASS
+      - POSTGRES_PASSWORD
+      - REDIS_PASSWORD
+      - MEMCACHED_PASSWORD
+      - SECRET
+    environment:
+      ## See https://github.com/zulip/docker-zulip#configuration for
+      ## details on this section and how to discover the many
+      ## additional settings that are supported here.
+      DB_HOST: "database"
+      DB_HOST_PORT: "5432"
+      DB_USER: "zulip"
+      SSL_CERTIFICATE_GENERATION: "self-signed"
+      SETTING_MEMCACHED_LOCATION: "memcached:11211"
+      SETTING_RABBITMQ_HOST: "rabbitmq"
+      SETTING_REDIS_HOST: "redis"
+      SECRETS_email_password: "123456789"
+      ## These should match RABBITMQ_DEFAULT_PASS, POSTGRES_PASSWORD,
+      ## MEMCACHED_PASSWORD, and REDIS_PASSWORD above.
+      SECRETS_rabbitmq_password: /run/secrets/RABBITMQ_DEFAULT_PASS
+      SECRETS_postgres_password: /run/secrets/POSTGRES_PASSWORD
+      SECRETS_memcached_password: /run/secrets/MEMCACHED_PASSWORD
+      SECRETS_redis_password: /run/secrets/REDIS_PASSWORD
+      SECRETS_secret_key: /run/secrets/SECRET
+      SETTING_EXTERNAL_HOST: "localhost.localdomain"
+      SETTING_ZULIP_ADMINISTRATOR: "admin@example.com"
+      SETTING_EMAIL_HOST: "" # e.g. smtp.example.com
+      SETTING_EMAIL_HOST_USER: "noreply@example.com"
+      SETTING_EMAIL_PORT: "587"
+      ## It seems that the email server needs to use ssl or tls and can't be used without it
+      SETTING_EMAIL_USE_SSL: "False"
+      SETTING_EMAIL_USE_TLS: "True"
+      ZULIP_AUTH_BACKENDS: "EmailAuthBackend"
+      ## Uncomment this when configuring the mobile push notifications service
+      # SETTING_ZULIP_SERVICE_PUSH_NOTIFICATIONS: "True"
+      # SETTING_ZULIP_SERVICE_SUBMIT_USAGE_STATISTICS: "True"
+
+      ## If you're using a reverse proxy, you'll want to provide the
+      ## comma-separated set of IP addresses to trust here.
+      # LOADBALANCER_IPS: "",
+
+      ## By default, files uploaded by users and profile pictures are
+      ## stored directly on the Zulip server. You can configure files
+      ## to be stored in Amazon S3 or a compatible data store
+      ## here. See docs at:
+      ##
+      ##   https://zulip.readthedocs.io/en/latest/production/upload-backends.html
+      ##
+      ## If you want to use the S3 backend, you must set
+      ## SETTING_LOCAL_UPLOADS_DIR to None as well as configuring the
+      ## other fields.
+      # SETTING_LOCAL_UPLOADS_DIR: "None"
+      # SETTING_S3_AUTH_UPLOADS_BUCKET: ""
+      # SETTING_S3_AVATAR_BUCKET: ""
+      # SETTING_S3_ENDPOINT_URL: "None"
+      # SETTING_S3_REGION: "None"
+    volumes:
+      - "zulip:/data:rw"
+    ulimits:
+      nofile:
+        soft: 1000000
+        hard: 1048576
+
+
+
+
+secrets:
+  POSTGRES_USER:
+    file: ./secrets/POSTGRES_USER.txt
+  POSTGRES_HOST:
+    file: ./secrets/POSTGRES_HOST.txt
+  POSTGRES_DB:
+    file: ./secrets/POSTGRES_DB.txt
+  POSTGRES_PASSWORD:
+    file: ./secrets/POSTGRES_PASSWORD.txt
+  RABBITMQ_DEFAULT_PASS:
+    file: ./secrets/RABBITMQ_DEFAULT_PASS.txt
+  MEMCACHED_PASSWORD:
+    file: ./secrets/MEMCACHED_PASSWORD.txt
+  REDIS_PASSWORD:
+    file: ./secrets/REDIS_PASSWORD.txt
+  SECRET:
+    file: ./secrets/SECRET.txt
+
+
+volumes:
+  postgresql:
+  rabbitmq:
+  redis:
+  zulip: 
+
+  
+
+    

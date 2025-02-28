@@ -1,0 +1,10 @@
+[Match]
+Name=br0
+
+[Network]
+Address=10.100.100/24
+IPMasquerade=ipv4
+ConfigureWithoutCareer=yes
+
+[Link]
+MTU=1500

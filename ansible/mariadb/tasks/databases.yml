@@ -1,0 +1,21 @@
+- name: Copy DDL for backups
+  become: yes
+  copy:
+    src: files/backups.sql
+    dest: /tmp/backups.sql
+    owner: root
+    group: root
+    mode: '644'
+
+
+- name: Create databases
+  community.mysql.mysql_db:
+    login_user: root
+    login_password: "{{ mariadb_root_password }}"
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    name:
+      - backups
+    state: import
+    target: /tmp/backups.sql
+  no_log: true
+  become: yes

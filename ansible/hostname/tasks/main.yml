@@ -1,0 +1,17 @@
+- name: Set hostname
+  ansible.builtin.hostname:
+    name: vps.titan-ops.local
+    use: systemd
+  become: true
+
+- name: localhost
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: 127.0.0.1 localhost.localdomain localhost
+  become: true
+
+- name: vps.titan-ops.local
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: 10.99.100.31 vps.titan-ops.local vps
+  become: true

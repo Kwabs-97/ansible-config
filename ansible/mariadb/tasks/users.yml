@@ -1,0 +1,26 @@
+- name: Check for Database User 'backup_script@localhost'
+  community.mysql.mysql_user:
+    login_user: root
+    login_password: "{{ mariadb_root_password }}"
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    name: backup_script
+    host: localhost
+    password: "{{ mariadb_backup_script_password }}"
+    priv: 'backups.*:ALL'
+    state: present
+  no_log: true
+  become: yes
+
+
+- name: Check for Database User 'backup_script@%'
+  community.mysql.mysql_user:
+    login_user: root
+    login_password: "{{ mariadb_root_password }}"
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    name: backup_script
+    host: "%"
+    password: "{{ mariadb_backup_script_password }}"
+    priv: 'backups.*:ALL'
+    state: present
+  no_log: true
+  become: yes

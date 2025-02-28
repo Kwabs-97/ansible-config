@@ -1,0 +1,9 @@
+- name: sshd config
+  ansible.builtin.copy:
+    src: files/sshd_config
+    dest: /etc/ssh/sshd_config
+    owner: ubuntu
+    group: ubuntu
+    mode: '644'
+  become: true
+  notify: reload ssh daemon

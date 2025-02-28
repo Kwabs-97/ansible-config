@@ -1,0 +1,5 @@
+  - include_tasks: packages.yml
+  - include_tasks: loopback.yml
+  - include_tasks: cron.yml
+  - include_tasks: br0.yml
+

@@ -1,0 +1,6 @@
+domain: "*.local.test"
+cert_dir: "/etc/ssl/local-certs"
+mkcert_version: "v1.4.4"
+renewal_script_path: "/usr/local/bin/renew-local-certs.sh"
+renewal_timer_path: "/etc/systemd/system/renew-local-certs.timer"
+renewal_service_path: "/etc/systemd/system/renew-local-certs.service"

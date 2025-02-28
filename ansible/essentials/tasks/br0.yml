@@ -1,0 +1,120 @@
+- name: backup current network configuration
+  ansible.builtin.copy:
+    src: /etc/systemd/network
+    dest: /etc/systemd/network.backup/
+    remote_src: true
+  ignore_errors: true
+  become: true
+
+  # Pre-flight checks
+- name: check existing network connectivity
+  shell: |
+    ping -c 1 8.8.8.8 
+  register: connectivity_check
+  ignore_errors: true
+
+- name: verfiy primary interface status
+  shell: |
+    ip link show {{ primary_interface }} | grep "state UP"
+  register: interface_check
+  ignore_errors: true
+
+- name: check for ip conflicts
+  shell: |
+    ip addr | grep -w "{{ bridge_ip | regex_replace('/.*$', '') }}" | grep -v "{{ bridge_name}}" || true
+  register: ip_conflict
+  changed_when: false
+
+- name: Fail if IP conflict found
+  fail:
+    msg: "IP conflict detected for {{ bridge_ip }}"
+  when: ip_conflict.stdout != ""
+
+  # End of pre-flight checks
+
+  # deploy bridge netdev configuration
+- name: deploy bridge netdev configuration
+  copy:
+    src: files/br0.netdev
+    dest: /etc/systemd/network/{{ bridge_name }}.netdev
+    mode: '644'
+  become: true
+  notify: restart systemd-networkd
+  register: netdev_config
+
+
+
+
+  # deploy bridge network configuration
+- name: deploy bridge network configuration
+  copy:
+    src: files/br0.network
+    dest: /etc/systemd/network/{{ bridge_name }}.network
+    mode: '644'
+  become: true
+  notify: restart systemd-networkd
+  register: network_config
+
+
+  # restart systemd-networkd immediately to effect changes
+- name: restart systemd-networkd immediately
+  systemd:
+    name: systemd-networkd
+    state: restarted
+  when: netdev_config.changed or network_config.changed
+  become: true
+
+  #wait for systemd-networkd to settle
+- name: wait for systemd-networkd to settle
+  pause: 
+    seconds: 5
+  when: netdev_config.changed or network_config.changed
+
+
+- name: wait for bridge interface to show
+  shell: |
+    timeout 30 bash -c 'until ip link show {{ bridge_name }}; do sleep 2; done'
+  register: bridge_wait 
+  changed_when: false
+  ignore_errors: true
+
+
+- name: verify bridge configuration
+  shell: |
+    ip addr show {{ bridge_name }}
+  register: bridge_config
+  changed_when: false
+  when: bridge_wait is success
+
+- name: verify network connectivity still works
+  shell: |
+    ping -c 1 8.8.8.8
+  register: final_connectivity
+  ignore_errors: true
+
+- name: Rollback on failure
+  block:
+    - name: remove bridge configurations
+      file: 
+        path: "/etc/systemd/network/{{ item }}"
+        state: absent
+      with_items:
+      - "{{ bridge_name }}.netdev"
+      - "{{ bridge_name }}.network"
+      become: true
+    
+    - name: restore backup configuration
+      copy:
+        src: /etc/systemd/network.backup/
+        dest: /etc/systemd/network
+        remote_src: true
+      become: true
+      when: bridge_wait is failed  or final_connectivity is failed
+
+    - name: Restart networking
+      systemd:
+        name: systemd-networkd
+        state: restarted
+      become: true
+
+  when: bridge_wait is failed and final_connectivity is failed

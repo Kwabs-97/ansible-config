@@ -1,0 +1,9 @@
+- hosts: main
+  roles:
+    # - hostname
+    # - essentials
+    # - security
+    # - kerneltweaks
+    # - mkcert
+    # - docker
+    - mariadb

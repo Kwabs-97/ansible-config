@@ -1,0 +1,99 @@
+  # Install packages
+- name: Install packages
+  ansible.builtin.apt:
+    update_cache: yes
+    name:
+      - libnss3-tools
+      - ca-certificates
+      - curl
+    state: present
+  become: true
+
+  # creating directory to store our TLS/SSL certificates
+- name: create the certificate directory
+  file:
+    path: "{{ cert_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  become: true 
+
+
+  # command to get the system architecture and saving it in a variable for referencing
+- name: get system architecture
+  command: "dpkg --print-architecture"
+  register: system_architecture
+  changed_when: false
+
+- name: set architecture variable
+  set_fact:
+    mkcert_arch: "{{ system_architecture.stdout }}"
+  when: system_architecture.stdout is defined
+
+
+  # download mkcert binary for the right architecture using the architecture variable set initially and set a destination where the binary should be saved to
+- name: download mkcert binary
+  get_url:
+    url: "https://github.com/FiloSottile/mkcert/releases/download/{{ mkcert_version }}/mkcert-{{ mkcert_version }}-linux-{{mkcert_arch}}"
+    dest: /usr/local/bin/mkcert
+    mode: '0755'
+    force: yes
+  become: true
+
+  # verify mkcert installation
+- name: verify mkcert installation
+  command: "mkcert --version"
+  register: mkcert_version_output
+  changed_when: false
+  failed_when: mkcert_version not in mkcert_version_output.stdout
+
+  # install mkcert
+- name: install mkcert
+  command: "mkcert -install"
+  become: true
+  args: 
+    creates: "{{ ansible_env.HOME }}/.local/share/mkcert/rootCA.pem"
+  environment: 
+    CAROOT: "/home/ubuntu/.local/share/mkcert"
+
+  # Generate certificates
+- name: Generate certificates
+  command: "mkcert -key-file {{ cert_dir }}/key.pem -cert-file {{ cert_dir }}/cert.pem {{ domain }}"
+  become: true
+  args:
+    creates: " {{ cert_dir }}/{{ domain }}.crt"
+
+
+  # create systemd renewal script
+- name: renewal script
+  copy:
+    src: files/renewal-local-certs.sh
+    dest: "{{ renewal_script_path }}"
+    mode: '0755'
+  become: true
+
+  # create systemd renewal service
+- name: create systemd renewal service
+  copy:
+    src: files/systemd-renewal-service
+    dest: "{{ renewal_service_path }}"
+    mode: '644'
+  become: true
+
+
+  # create systemd renewal timer
+- name: create systemd renewal timer
+  become: true
+  copy: 
+    src: files/renew-local-certs.timer
+    dest: "{{ renewal_timer_path }}"
+
+
+  # start and enable renewal timer
+- name: start and enable renewal timer
+  systemd:
+    name: renew-local-certs.timer
+    state: started 
+    enabled: yes
+  become: true

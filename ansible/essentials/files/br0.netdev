@@ -1,0 +1,7 @@
+[NetDev]
+Name=br0
+Kind=bridge
+Description=Bridge interface for VMs
+
+[Bridge]
+STP=true

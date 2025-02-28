@@ -1,0 +1,5 @@
+- name: reload sysctl
+  systemd_service:
+    name: systemd-sysctl
+    state: restarted
+  become: true
