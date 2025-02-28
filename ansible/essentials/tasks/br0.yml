@@ -21,7 +21,7 @@
 
 - name: check for ip conflicts
   shell: |
-    ip addr | grep -w "{{ bridge_ip | regex_replace('/.*$', '') }}" | grep -v "{{ bridge_name}}" || true
+    ip addr | grep -w "{{ bridge_ip | regex_replace('/.*$', '') }}" | grep -v "{{ bridge_name }}" || true
   register: ip_conflict
   changed_when: false
 

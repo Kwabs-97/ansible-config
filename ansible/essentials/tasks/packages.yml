@@ -2,17 +2,21 @@
   ansible.builtin.apt:
     state: present
     name:
-      - plocate
-      - bat
+      - build-essential
+      - bat            
       - fd-find
       - fzf
+      - git
+      - htop
       - iotop
       - lm-sensors
       - man-db
       - manpages
       - p7zip-full
+      - plocate
       - ripgrep
       - smartmontools
+      - sudo
       - zsh
   become: true
 
