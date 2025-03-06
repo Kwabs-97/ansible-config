@@ -1,9 +1,10 @@
 - hosts: main
   roles:
     # - hostname
-    - essentials
+    # - essentials
     # - security
     # - kerneltweaks
     # - mkcert
     # - docker
-    - mariadb
+    # - mariadb
+    - lxc
