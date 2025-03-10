@@ -57,7 +57,7 @@
     login_unix_socket: /var/run/mysqld/mysqld.sock
     state: present
   no_log: false
-  become: true
+  become: yes
 
 - name: Verify root password
   mysql_query:

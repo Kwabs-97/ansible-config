@@ -6,36 +6,33 @@
 
 # The API documentation can be found here: https://api.ns1.hosttech.eu/api/documentation/
 
-from __future__ import (absolute_import, division, print_function)
+from __future__ import absolute_import, division, print_function
+
+
 __metaclass__ = type
 
 
 from ansible_collections.community.dns.plugins.module_utils.json_api_helper import (
     JSONAPIHelper,
 )
-
-from ansible_collections.community.dns.plugins.module_utils.record import (
-    DNSRecord,
-)
-
+from ansible_collections.community.dns.plugins.module_utils.record import DNSRecord
 from ansible_collections.community.dns.plugins.module_utils.zone import (
     DNSZone,
     DNSZoneWithRecords,
 )
-
 from ansible_collections.community.dns.plugins.module_utils.zone_record_api import (
-    DNSAPIError,
     NOT_PROVIDED,
+    DNSAPIError,
     ZoneRecordAPI,
     filter_records,
 )
 
 
-def _create_record_from_json(source, type=None):
+def _create_record_from_json(source, record_type=None):
     source = dict(source)
     result = DNSRecord()
     result.id = source.pop('id')
-    result.type = source.pop('type', type)
+    result.type = source.pop('type', record_type)
     ttl = source.pop('ttl')
     result.ttl = int(ttl) if ttl is not None else None
     result.extra['comment'] = source.pop('comment')
@@ -78,13 +75,13 @@ def _create_record_from_json(source, type=None):
 def _create_zone_from_json(source):
     zone = DNSZone(source['name'])
     zone.id = source['id']
-    zone.info = dict(
-        dnssec=source['dnssec'],
-        dnssec_email=source.get('dnssec_email'),
-        ds_records=source.get('ds_records'),
-        email=source.get('email'),
-        ttl=source['ttl'],
-    )
+    zone.info = {
+        'dnssec': source['dnssec'],
+        'dnssec_email': source.get('dnssec_email'),
+        'ds_records': source.get('ds_records'),
+        'email': source.get('email'),
+        'ttl': source['ttl'],
+    }
     return zone
 
 
@@ -202,35 +199,35 @@ class HostTechJSONAPI(ZoneRecordAPI, JSONAPIHelper):
         return ' with data: {0}'.format(result)
 
     def _create_headers(self):
-        return dict(
-            accept='application/json',
-            authorization='Bearer {token}'.format(token=self._token),
-        )
+        return {
+            'accept': 'application/json',
+            'authorization': 'Bearer {token}'.format(token=self._token),
+        }
 
     def _list_pagination(self, url, query=None, block_size=100):
         result = []
         offset = 0
         while True:
-            query_ = query.copy() if query else dict()
+            query_ = query.copy() if query else {}
             query_['limit'] = block_size
             query_['offset'] = offset
-            res, info = self._get(url, query_, must_have_content=True, expected=[200])
+            res, dummy = self._get(url, query_, must_have_content=True, expected=[200])
             result.extend(res['data'])
             if len(res['data']) < block_size:
                 return result
             offset += block_size
 
-    def get_zone_with_records_by_id(self, id, prefix=NOT_PROVIDED, record_type=NOT_PROVIDED):
+    def get_zone_with_records_by_id(self, zone_id, prefix=NOT_PROVIDED, record_type=NOT_PROVIDED):
         """
         Given a zone ID, return the zone contents with records if found.
 
-        @param id: The zone ID
+        @param zone_id: The zone ID
         @param prefix: The prefix to filter for, if provided. Since None is a valid value,
                        the special constant NOT_PROVIDED indicates that we are not filtering.
         @param record_type: The record type to filter for, if provided
         @return The zone information with records (DNSZoneWithRecords), or None if not found
         """
-        result, info = self._get('user/v1/zones/{0}'.format(id), expected=[200, 404], must_have_content=[200])
+        result, info = self._get('user/v1/zones/{0}'.format(zone_id), expected=[200, 404], must_have_content=[200])
         if info['status'] == 404:
             return None
         return _create_zone_with_records_from_json(result['data'], prefix=prefix, record_type=record_type)
@@ -245,10 +242,10 @@ class HostTechJSONAPI(ZoneRecordAPI, JSONAPIHelper):
         @param record_type: The record type to filter for, if provided
         @return The zone information with records (DNSZoneWithRecords), or None if not found
         """
-        result = self._list_pagination('user/v1/zones', query=dict(query=name))
+        result = self._list_pagination('user/v1/zones', query={'query': name})
         for zone in result:
             if zone['name'] == name:
-                result, info = self._get('user/v1/zones/{0}'.format(zone['id']), expected=[200])
+                result, dummy = self._get('user/v1/zones/{0}'.format(zone['id']), expected=[200])
                 return _create_zone_with_records_from_json(result['data'], prefix=prefix, record_type=record_type)
         return None
 
@@ -262,7 +259,7 @@ class HostTechJSONAPI(ZoneRecordAPI, JSONAPIHelper):
         @param record_type: The record type to filter for, if provided
         @return A list of DNSrecord objects, or None if zone was not found
         """
-        query = dict()
+        query = {}
         if record_type is not NOT_PROVIDED:
             query['type'] = record_type.upper()
         result, info = self._get('user/v1/zones/{0}/records'.format(zone_id), query=query, expected=[200, 404], must_have_content=[200])
@@ -281,21 +278,21 @@ class HostTechJSONAPI(ZoneRecordAPI, JSONAPIHelper):
         @param name: The zone name (string)
         @return The zone information (DNSZone), or None if not found
         """
-        result = self._list_pagination('user/v1/zones', query=dict(query=name))
+        result = self._list_pagination('user/v1/zones', query={'query': name})
         for zone in result:
             if zone['name'] == name:
                 # We cannot simply return `_create_zone_from_json(zone)`, since this contains less information!
                 return self.get_zone_by_id(zone['id'])
         return None
 
-    def get_zone_by_id(self, id):
+    def get_zone_by_id(self, zone_id):
         """
         Given a zone ID, return the zone contents if found.
 
-        @param id: The zone ID
+        @param zone_id: The zone ID
         @return The zone information (DNSZone), or None if not found
         """
-        result, info = self._get('user/v1/zones/{0}'.format(id), expected=[200, 404], must_have_content=[200])
+        result, info = self._get('user/v1/zones/{0}'.format(zone_id), expected=[200, 404], must_have_content=[200])
         if info['status'] == 404:
             return None
         return _create_zone_from_json(result['data'])

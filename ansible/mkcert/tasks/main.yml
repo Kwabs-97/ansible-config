@@ -1,4 +1,3 @@
-  # Install packages
 - name: Install packages
   ansible.builtin.apt:
     update_cache: yes
@@ -7,93 +6,102 @@
       - ca-certificates
       - curl
     state: present
-  become: true
+  become: yes
 
-  # creating directory to store our TLS/SSL certificates
-- name: create the certificate directory
-  file:
+
+- name: Create the certificate directory
+  ansible.builtin.file:
     path: "{{ cert_dir }}"
     state: directory
     owner: root
     group: root
-    mode: 0755
-  become: true 
+    mode: '755'
+  become: yes
 
-
-  # command to get the system architecture and saving it in a variable for referencing
-- name: get system architecture
+- name: Get system architecture
   command: "dpkg --print-architecture"
   register: system_architecture
   changed_when: false
 
-- name: set architecture variable
+- name: Set architecture variable
   set_fact:
     mkcert_arch: "{{ system_architecture.stdout }}"
   when: system_architecture.stdout is defined
 
 
-  # download mkcert binary for the right architecture using the architecture variable set initially and set a destination where the binary should be saved to
-- name: download mkcert binary
+- name: Download mkcert binary
   get_url:
-    url: "https://github.com/FiloSottile/mkcert/releases/download/{{ mkcert_version }}/mkcert-{{ mkcert_version }}-linux-{{mkcert_arch}}"
+    url: "https://github.com/FiloSottile/mkcert/releases/download/{{ mkcert_version }}/mkcert-{{ mkcert_version }}-linux-{{ mkcert_arch }}"
     dest: /usr/local/bin/mkcert
-    mode: '0755'
+    mode: '755'
     force: yes
-  become: true
+  become: yes
 
-  # verify mkcert installation
-- name: verify mkcert installation
-  command: "mkcert --version"
+
+- name: Verify mkcert installation
+  command: "mkcert -version"
   register: mkcert_version_output
   changed_when: false
   failed_when: mkcert_version not in mkcert_version_output.stdout
 
-  # install mkcert
-- name: install mkcert
+
+- name: Initialize mkcert
   command: "mkcert -install"
-  become: true
-  args: 
+  become: yes
+  args:
     creates: "{{ ansible_env.HOME }}/.local/share/mkcert/rootCA.pem"
   environment: 
     CAROOT: "/home/ubuntu/.local/share/mkcert"
 
-  # Generate certificates
+
 - name: Generate certificates
-  command: "mkcert -key-file {{ cert_dir }}/key.pem -cert-file {{ cert_dir }}/cert.pem {{ domain }}"
-  become: true
+  command: "mkcert -cert-file {{ cert_dir }}/cert.pem -key-file {{ cert_dir }}/key.pem {{ domain }}"
+  become: yes
   args:
-    creates: " {{ cert_dir }}/{{ domain }}.crt"
+    creates: "{{ cert_dir }}/cert.pem"
 
 
-  # create systemd renewal script
-- name: renewal script
+- name: Create renewal script
+  become: yes
   copy:
-    src: files/renewal-local-certs.sh
     dest: "{{ renewal_script_path }}"
-    mode: '0755'
-  become: true
+    content: |
+      #!/bin/bash
+      mkcert -cert-file {{ cert_dir }}/cert.pem -key-file {{ cert_dir }}/key.pem {{ domain }}
+      systemctl reload nginx 2>/dev/null || true
 
-  # create systemd renewal service
-- name: create systemd renewal service
+    mode: '755'
+
+
+- name: Create systemd renewal service
+  become: yes
   copy:
-    src: files/systemd-renewal-service
     dest: "{{ renewal_service_path }}"
+    content: |
+      [Unit]
+      Description=Renew local certificates
+      After=network.target
+
+      [Service]
+      Type=oneshot
+      ExecStart={{ renewal_script_path }}
+
+      [Install]
+      WantedBy=multi-user.target
+
     mode: '644'
-  become: true
 
 
-  # create systemd renewal timer
-- name: create systemd renewal timer
-  become: true
+- name: Create systemd renewal timer
+  become: yes
   copy: 
-    src: files/renew-local-certs.timer
     dest: "{{ renewal_timer_path }}"
+    src: files/renew-local-certs.timer
 
 
-  # start and enable renewal timer
-- name: start and enable renewal timer
+- name: Start and enable the renewal timer
   systemd:
     name: renew-local-certs.timer
-    state: started 
+    state: started
     enabled: yes
-  become: true
+  become: yes

@@ -4,12 +4,15 @@
 # GNU General Public License v3.0+ (see LICENSES/GPL-3.0-or-later.txt or https://www.gnu.org/licenses/gpl-3.0.txt)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from __future__ import (absolute_import, division, print_function)
+from __future__ import absolute_import, division, print_function
+
+
 __metaclass__ = type
 
 
 from ansible.module_utils.common.text.converters import to_native
 from ansible.module_utils.six import string_types
+
 
 try:
     import lxml.etree
@@ -17,9 +20,7 @@ try:
 except ImportError:
     HAS_LXML_ETREE = False
 
-from ansible_collections.community.dns.plugins.module_utils.http import (
-    NetworkError,
-)
+from ansible_collections.community.dns.plugins.module_utils.http import NetworkError
 
 
 class WSDLException(Exception):
@@ -107,7 +108,7 @@ def _decode_wsdl_array(result, node, root_ns, ids):
 def decode_wsdl(node, root_ns, ids):
     href = node.get('href')
     nil = node.get(lxml.etree.QName(_NAMESPACE_XSI, 'nil'))
-    id = node.get('id')
+    nid = node.get('id')
     if href is not None:
         if not href.startswith('#'):
             raise WSDLCodingException('Global reference "{0}" not supported!'.format(href))
@@ -121,28 +122,28 @@ def decode_wsdl(node, root_ns, ids):
         type_with_ns = node.get(lxml.etree.QName(_NAMESPACE_XSI, 'type'))
         if type_with_ns is None:
             raise WSDLCodingException('Element "{0}" has no "xsi:type" tag!'.format(node))
-        type, ns = _split_text_namespace(node, type_with_ns)
+        ntype, ns = _split_text_namespace(node, type_with_ns)
         if ns is None:
             raise WSDLCodingException('Cannot find namespace for "{0}"!'.format(type_with_ns))
         if ns == _NAMESPACE_XSD:
-            if type == 'boolean':
+            if ntype == 'boolean':
                 if node.text == 'true':
                     result = True
                 elif node.text == 'false':
                     result = False
                 else:
                     raise WSDLCodingException('Invalid value for boolean: "{0}"'.format(node.text))
-            elif type == 'int':
+            elif ntype == 'int':
                 result = int(node.text)
-            elif type == 'string':
+            elif ntype == 'string':
                 result = node.text
             else:
-                raise WSDLCodingException('Unknown XSD type "{0}"!'.format(type))
+                raise WSDLCodingException('Unknown XSD type "{0}"!'.format(ntype))
         elif ns == _NAMESPACE_XML_SOAP:
-            if type == 'Map':
-                result = dict()
-                if id is not None:
-                    ids[id] = result
+            if ntype == 'Map':
+                result = {}
+                if nid is not None:
+                    ids[nid] = result
                 for item in node:
                     if item.tag != 'item':
                         raise WSDLCodingException('Invalid child tag "{0}" in map!'.format(item.tag))
@@ -156,33 +157,32 @@ def decode_wsdl(node, root_ns, ids):
                     value = decode_wsdl(value, root_ns, ids)
                     result[key] = value
                 return result
-            else:
-                raise WSDLCodingException('Unknown XSD type "{0}"!'.format(type))
+            raise WSDLCodingException('Unknown XSD type "{0}"!'.format(ntype))
         elif ns == _NAMESPACE_XML_SOAP_ENCODING:
-            if type == 'Array':
+            if ntype == 'Array':
                 result = []
-                if id is not None:
-                    ids[id] = result
+                if nid is not None:
+                    ids[nid] = result
                 _decode_wsdl_array(result, node, root_ns, ids)
             else:
-                raise WSDLCodingException('Unknown XSD type "{0}"!'.format(type))
+                raise WSDLCodingException('Unknown XSD type "{0}"!'.format(ntype))
         elif ns == root_ns:
             array_type = node.get(lxml.etree.QName(_NAMESPACE_XML_SOAP_ENCODING, 'arrayType'))
             if array_type is not None:
                 result = []
-                if id is not None:
-                    ids[id] = result
+                if nid is not None:
+                    ids[nid] = result
                 _decode_wsdl_array(result, node, root_ns, ids)
             else:
-                result = dict()
-                if id is not None:
-                    ids[id] = result
+                result = {}
+                if nid is not None:
+                    ids[nid] = result
                 for item in node:
                     result[item.tag] = decode_wsdl(item, root_ns, ids)
         else:
-            raise WSDLCodingException('Unknown type namespace "{0}" (with type "{1}")!'.format(ns, type))
-    if id is not None:
-        ids[id] = result
+            raise WSDLCodingException('Unknown type namespace "{0}" (with type "{1}")!'.format(ns, ntype))
+    if nid is not None:
+        ids[nid] = result
     return result
 
 
@@ -212,8 +212,8 @@ class Parser(object):
             if fault_string is not None and fault_string.text:
                 raise WSDLError(origin, fault_code_val, fault_string.text)
             raise WSDLError(origin, fault_code_val, lxml.etree.tostring(fault).decode('utf-8'))
-        self._header = dict()
-        self._body = dict()
+        self._header = {}
+        self._body = {}
         for header in self._root.iter(lxml.etree.QName(self._main_ns, 'Header').text):
             self._parse(self._header, header, 'header')
         for body in self._root.iter(lxml.etree.QName(self._main_ns, 'Body').text):
@@ -237,8 +237,7 @@ class Composer(object):
     def _create(tag, namespace=None, **kwarg):
         if namespace:
             return lxml.etree.Element(lxml.etree.QName(namespace, tag), **kwarg)
-        else:
-            return lxml.etree.Element(tag, **kwarg)
+        return lxml.etree.Element(tag, **kwarg)
 
     def __str__(self):
         return '''<?xml version='1.0' encoding='utf-8'?>''' + '\n' + lxml.etree.tostring(self._root, pretty_print=True).decode('utf-8')
@@ -304,5 +303,5 @@ class Composer(object):
         #     q.q('Result: {0}, content: {1}'.format(code, result.decode('utf-8')))
         if code < 200 or code >= 300:
             Parser(self._api, lxml.etree.fromstring(result))
-            raise WSDLError('server', 'Error {0} while executing WSDL command:\n{1}'.format(code, result.decode('utf-8')))
+            raise WSDLError('server', '', 'Error {0} while executing WSDL command:\n{1}'.format(code, result.decode('utf-8')))
         return Parser(self._api, lxml.etree.fromstring(result))

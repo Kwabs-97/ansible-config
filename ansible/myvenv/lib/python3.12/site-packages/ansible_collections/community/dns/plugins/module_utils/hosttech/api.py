@@ -4,32 +4,25 @@
 # GNU General Public License v3.0+ (see LICENSES/GPL-3.0-or-later.txt or https://www.gnu.org/licenses/gpl-3.0.txt)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from __future__ import (absolute_import, division, print_function)
+from __future__ import absolute_import, division, print_function
+
+
 __metaclass__ = type
 
 
-from ansible_collections.community.dns.plugins.module_utils.argspec import (
-    ArgumentSpec,
+from ansible_collections.community.dns.plugins.module_utils.argspec import ArgumentSpec
+from ansible_collections.community.dns.plugins.module_utils.hosttech.json_api import (
+    HostTechJSONAPI,
 )
-
-from ansible_collections.community.dns.plugins.module_utils.provider import (
-    ProviderInformation,
-)
-
-from ansible_collections.community.dns.plugins.module_utils.wsdl import (
-    HAS_LXML_ETREE,
-)
-
-from ansible_collections.community.dns.plugins.module_utils.zone_record_api import (
-    DNSAPIError,
-)
-
 from ansible_collections.community.dns.plugins.module_utils.hosttech.wsdl_api import (
     HostTechWSDLAPI,
 )
-
-from ansible_collections.community.dns.plugins.module_utils.hosttech.json_api import (
-    HostTechJSONAPI,
+from ansible_collections.community.dns.plugins.module_utils.provider import (
+    ProviderInformation,
+)
+from ansible_collections.community.dns.plugins.module_utils.wsdl import HAS_LXML_ETREE
+from ansible_collections.community.dns.plugins.module_utils.zone_record_api import (
+    DNSAPIError,
 )
 
 
@@ -89,11 +82,11 @@ def create_hosttech_provider_information():
 
 def create_hosttech_argument_spec():
     return ArgumentSpec(
-        argument_spec=dict(
-            hosttech_username=dict(type='str'),
-            hosttech_password=dict(type='str', no_log=True),
-            hosttech_token=dict(type='str', no_log=True, aliases=['api_token']),
-        ),
+        argument_spec={
+            'hosttech_username': {'type': 'str'},
+            'hosttech_password': {'type': 'str', 'no_log': True},
+            'hosttech_token': {'type': 'str', 'no_log': True, 'aliases': ['api_token']},
+        },
         required_together=[('hosttech_username', 'hosttech_password')],
         mutually_exclusive=[('hosttech_username', 'hosttech_token')],
     )

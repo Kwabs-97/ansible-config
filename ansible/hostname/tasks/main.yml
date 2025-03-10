@@ -1,17 +1,17 @@
-- name: Set hostname
+- name: set hostname
   ansible.builtin.hostname:
     name: vps.titan-ops.local
     use: systemd
-  become: true
+  become: yes
 
 - name: localhost
   ansible.builtin.lineinfile:
     path: /etc/hosts
     line: 127.0.0.1 localhost.localdomain localhost
-  become: true
+  become: yes
 
 - name: vps.titan-ops.local
   ansible.builtin.lineinfile:
     path: /etc/hosts
-    line: 10.99.100.31 vps.titan-ops.local vps
-  become: true
+    line:  192.168.64.3 vps.titan-ops.local vps # replace IP here with your multipass IP
+  become: yes

@@ -1,13 +1,12 @@
 {
-    "default-address-pools": [
-        {"base": "172.21.0.0/16","size": 24},
-        {"base": "172.22.0.0/16","size": 24},
-        {"base": "172.23.0.0/16","size": 24},
-        {"base": "172.24.0.0/16","size": 24},
-        {"base": "172.25.0.0/16","size": 24}
-        
-    ],
-    "ip-forward": true,
-    "userland-proxy": false,
-    "log-level": "debug"
+  "default-address-pools": [
+    {"base": "172.21.0.0/16", "size": 24},
+    {"base": "172.22.0.0/16", "size": 24},
+    {"base": "172.23.0.0/16", "size": 24},
+    {"base": "172.24.0.0/16", "size": 24},
+    {"base": "172.25.0.0/16", "size": 24}
+  ],
+  "ip-forward": true,
+  "userland-proxy": false,
+  "log-level": "debug"
 }

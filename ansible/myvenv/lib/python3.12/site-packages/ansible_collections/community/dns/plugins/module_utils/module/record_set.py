@@ -6,67 +6,59 @@
 
 # This module_utils is PRIVATE and should only be used by this collection. Breaking changes can occur any time.
 
-from __future__ import (absolute_import, division, print_function)
+from __future__ import absolute_import, division, print_function
+
+
 __metaclass__ = type
 
 
 import traceback
 
 from ansible.module_utils.common.text.converters import to_text
-
 from ansible_collections.community.dns.plugins.module_utils.argspec import (
     ArgumentSpec,
     ModuleOptionProvider,
 )
-
 from ansible_collections.community.dns.plugins.module_utils.conversion.base import (
     DNSConversionError,
 )
-
 from ansible_collections.community.dns.plugins.module_utils.conversion.converter import (
     RecordConverter,
 )
-
 from ansible_collections.community.dns.plugins.module_utils.options import (
     create_bulk_operations_argspec,
     create_record_transformation_argspec,
 )
-
 from ansible_collections.community.dns.plugins.module_utils.record import (
     DNSRecord,
     format_records_for_output,
 )
-
 from ansible_collections.community.dns.plugins.module_utils.zone_record_api import (
-    DNSAPIError,
-    DNSAPIAuthenticationError,
     NOT_PROVIDED,
+    DNSAPIAuthenticationError,
+    DNSAPIError,
     filter_records,
 )
-
 from ansible_collections.community.dns.plugins.module_utils.zone_record_helpers import (
     bulk_apply_changes,
 )
 
-from ._utils import (
-    normalize_dns_name,
-    get_prefix,
-)
+from ._utils import get_prefix, normalize_dns_name
 
 
 def create_module_argument_spec(provider_information):
     return ArgumentSpec(
-        argument_spec=dict(
-            state=dict(type='str', choices=['present', 'absent'], required=True),
-            zone_name=dict(type='str', aliases=['zone']),
-            zone_id=dict(type=provider_information.get_zone_id_type()),
-            record=dict(type='str'),
-            prefix=dict(type='str'),
-            ttl=dict(type='int', default=provider_information.get_record_default_ttl()),
-            type=dict(choices=provider_information.get_supported_record_types(), required=True),
-            value=dict(type='list', elements='str'),
-            on_existing=dict(type='str', default='replace', choices=['replace', 'keep_and_fail', 'keep_and_warn', 'keep']),
-        ),
+        argument_spec={
+            'state': {'type': 'str', 'choices': ['present', 'absent'], 'required': True},
+            'zone_name': {'type': 'str', 'aliases': ['zone']},
+            'zone_id': {'type': provider_information.get_zone_id_type()},
+            'record': {'type': 'str'},
+            'prefix': {'type': 'str'},
+            'ttl': {'type': 'int', 'default': provider_information.get_record_default_ttl()},
+            'type': {'choices': provider_information.get_supported_record_types(), 'required': True},
+            'value': {'type': 'list', 'elements': 'str'},
+            'on_existing': {'type': 'str', 'default': 'replace', 'choices': ['replace', 'keep_and_fail', 'keep_and_warn', 'keep']},
+        },
         required_one_of=[
             ('zone_name', 'zone_id'),
             ('record', 'prefix'),
@@ -220,10 +212,10 @@ def run_module(module, create_api, provider_information):
                 after = []
 
         # Compose result
-        result = dict(
-            changed=False,
-            zone_id=zone_id,
-        )
+        result = {
+            'changed': False,
+            'zone_id': zone_id,
+        }
 
         # Determine whether there's something to do
         if to_create or to_delete or to_change:
@@ -233,7 +225,7 @@ def run_module(module, create_api, provider_information):
             records_to_create = record_converter.clone_multiple_to_api(to_create)
             result['changed'] = True
             if not module.check_mode:
-                dummy, errors, success = bulk_apply_changes(
+                dummy, errors, dummy2 = bulk_apply_changes(
                     api,
                     zone_id=zone_id,
                     records_to_delete=records_to_delete,
@@ -252,16 +244,16 @@ def run_module(module, create_api, provider_information):
 
         # Include diff information
         if module._diff:
-            result['diff'] = dict(
-                before=(
+            result['diff'] = {
+                'before': (
                     format_records_for_output(sorted(before, key=lambda record: record.target), record_in, prefix, record_converter=record_converter)
-                    if before else dict()
+                    if before else {}
                 ),
-                after=(
+                'after': (
                     format_records_for_output(sorted(after, key=lambda record: record.target), record_in, prefix, record_converter=record_converter)
-                    if after else dict()
+                    if after else {}
                 ),
-            )
+            }
 
         module.exit_json(**result)
     except DNSConversionError as e:

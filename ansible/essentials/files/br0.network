@@ -2,9 +2,9 @@
 Name=br0
 
 [Network]
-Address=10.100.100/24
+Address=10.100.100.1/24
 IPMasquerade=ipv4
-ConfigureWithoutCareer=yes
+ConfigureWithoutCarrier=yes
 
 [Link]
 MTU=1500

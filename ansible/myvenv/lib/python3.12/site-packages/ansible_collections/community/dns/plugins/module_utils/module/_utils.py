@@ -6,16 +6,17 @@
 
 # This module_utils is PRIVATE and should only be used by this collection. Breaking changes can occur any time.
 
-from __future__ import (absolute_import, division, print_function)
+from __future__ import absolute_import, division, print_function
+
+
 __metaclass__ = type
 
 
 from ansible_collections.community.dns.plugins.module_utils.names import (
-    split_into_labels,
     join_labels,
     normalize_label,
+    split_into_labels,
 )
-
 from ansible_collections.community.dns.plugins.module_utils.zone_record_api import (
     DNSAPIError,
 )
@@ -39,5 +40,4 @@ def get_prefix(normalized_zone, provider_information, normalized_record=None, pr
         raise DNSAPIError('Record must be in zone')
     if normalized_record == normalized_zone:
         return normalized_record, None
-    else:
-        return normalized_record, normalized_record[:len(normalized_record) - len(normalized_zone) - 1]
+    return normalized_record, normalized_record[:len(normalized_record) - len(normalized_zone) - 1]

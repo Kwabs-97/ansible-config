@@ -5,37 +5,27 @@
 # GNU General Public License v3.0+ (see LICENSES/GPL-3.0-or-later.txt or https://www.gnu.org/licenses/gpl-3.0.txt)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from __future__ import (absolute_import, division, print_function)
+from __future__ import absolute_import, division, print_function
+
+
 __metaclass__ = type
 
 
 from ansible.module_utils.basic import env_fallback
-
-from ansible_collections.community.dns.plugins.module_utils.argspec import (
-    ArgumentSpec,
-)
-
+from ansible_collections.community.dns.plugins.module_utils.argspec import ArgumentSpec
 from ansible_collections.community.dns.plugins.module_utils.json_api_helper import (
-    JSONAPIHelper,
     ERROR_CODES,
     UNKNOWN_ERROR,
+    JSONAPIHelper,
 )
-
 from ansible_collections.community.dns.plugins.module_utils.provider import (
     ProviderInformation,
 )
-
-from ansible_collections.community.dns.plugins.module_utils.record import (
-    DNSRecord,
-)
-
-from ansible_collections.community.dns.plugins.module_utils.zone import (
-    DNSZone,
-)
-
+from ansible_collections.community.dns.plugins.module_utils.record import DNSRecord
+from ansible_collections.community.dns.plugins.module_utils.zone import DNSZone
 from ansible_collections.community.dns.plugins.module_utils.zone_record_api import (
-    DNSAPIError,
     NOT_PROVIDED,
+    DNSAPIError,
     ZoneRecordAPI,
     filter_records,
 )
@@ -53,12 +43,12 @@ def _create_zone_from_json(source):
     return zone
 
 
-def _create_record_from_json(source, type=None, has_id=True):
+def _create_record_from_json(source, record_type=None, has_id=True):
     source = dict(source)
     result = DNSRecord()
     if has_id:
         result.id = source.pop('id')
-    result.type = source.pop('type', type)
+    result.type = source.pop('type', record_type)
     result.ttl = source.pop('ttl', None)
     name = source.pop('name', None)
     if name == '@':
@@ -133,7 +123,7 @@ class HetznerAPI(ZoneRecordAPI, JSONAPIHelper):
         result = []
         page = 1
         while True:
-            query_ = query.copy() if query else dict()
+            query_ = query.copy() if query else {}
             query_['per_page'] = block_size
             query_['page'] = page
             res, info = self._get(url, query_, must_have_content=[200], expected=[200, 404] if accept_404 and page == 1 else [200])
@@ -153,20 +143,20 @@ class HetznerAPI(ZoneRecordAPI, JSONAPIHelper):
         @param name: The zone name (string)
         @return The zone information (DNSZone), or None if not found
         """
-        result, info = self._get('v1/zones', expected=[200, 404], query=dict(name=name))
+        result, dummy = self._get('v1/zones', expected=[200, 404], query={'name': name})
         for zone in result['zones']:
             if zone.get('name') == name:
                 return _create_zone_from_json(zone)
         return None
 
-    def get_zone_by_id(self, id):
+    def get_zone_by_id(self, zone_id):
         """
         Given a zone ID, return the zone contents if found.
 
-        @param id: The zone ID
+        @param zone_id: The zone ID
         @return The zone information (DNSZone), or None if not found
         """
-        result, info = self._get('v1/zones/{id}'.format(id=id), expected=[200, 404], must_have_content=[200])
+        result, info = self._get('v1/zones/{zone_id}'.format(zone_id=zone_id), expected=[200, 404], must_have_content=[200])
         if info['status'] == 404:
             return None
         return _create_zone_from_json(result['zone'])
@@ -181,7 +171,7 @@ class HetznerAPI(ZoneRecordAPI, JSONAPIHelper):
         @param record_type: The record type to filter for, if provided
         @return A list of DNSrecord objects, or None if zone was not found
         """
-        result = self._list_pagination('v1/records', data_key='records', query=dict(zone_id=zone_id), accept_404=True)
+        result = self._list_pagination('v1/records', data_key='records', query={'zone_id': zone_id}, accept_404=True)
         if result is None:
             return None
         return filter_records(
@@ -273,7 +263,7 @@ class HetznerAPI(ZoneRecordAPI, JSONAPIHelper):
                 json_records.append(_record_to_json(record, zone_id=zone_id))
         data = {'records': json_records}
         # Error 422 means that at least one of the records was not valid
-        result, info = self._post('v1/records/bulk', data=data, expected=[200, 422])
+        result, dummy = self._post('v1/records/bulk', data=data, expected=[200, 422])
         results_per_zone_id = {}
         # This is the list of invalid records that was detected before accepting the whole set
         for json_record in result.get('invalid_records') or []:
@@ -403,15 +393,15 @@ def create_hetzner_provider_information():
 
 def create_hetzner_argument_spec():
     return ArgumentSpec(
-        argument_spec=dict(
-            hetzner_token=dict(
-                type='str',
-                required=True,
-                no_log=True,
-                aliases=['api_token'],
-                fallback=(env_fallback, ['HETZNER_DNS_TOKEN']),
-            ),
-        ),
+        argument_spec={
+            'hetzner_token': {
+                'type': 'str',
+                'required': True,
+                'no_log': True,
+                'aliases': ['api_token'],
+                'fallback': (env_fallback, ['HETZNER_DNS_TOKEN']),
+            },
+        },
     )
 
 

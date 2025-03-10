@@ -1,6 +1,6 @@
-- name: install packages and create script directory
+- name: install packages
   ansible.builtin.apt:
-    state: present
+    update_cache: yes
     name:
       - build-essential
       - bat            
@@ -18,12 +18,41 @@
       - smartmontools
       - sudo
       - zsh
-  become: true
+    state: present
+  become: yes
 
-- name: create script directory
+
+- name: ensure plocate updatedb timer is started and enabled
+  ansible.builtin.systemd:
+    name: plocate-updatedb.timer
+    enabled: yes
+    state: started
+  become: yes
+
+
+- name: symlink fd to fdfind
   ansible.builtin.file:
-    state: directory
-    mode: '755'
-    owner: ubuntu
+    src: /usr/bin/fdfind
+    dest: /usr/bin/fd
+    state: link
+  become: yes
+
+
+- name: create scripts directory
+  ansible.builtin.file:
     path: /home/ubuntu/scripts
-  become: true
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '755'
+  become: yes
+
+
+- name: update apt mirrors script
+  ansible.builtin.copy:
+    src: files/apt-select-mirror.sh
+    dest: /home/ubuntu/scripts/apt-select-mirror.sh
+    owner: ubuntu
+    group: ubuntu
+    mode: '700'
+  become: yes

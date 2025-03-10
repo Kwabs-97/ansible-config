@@ -1,18 +1,18 @@
-- name: add docker's official GPG key
-  apt_key: 
+- name: Add Docker's official GPG key
+  ansible.builtin.apt_key:
     url: https://download.docker.com/linux/ubuntu/gpg
     state: present
-  become: true
+  become: yes
 
-- name: add docker's official APT repository
-  apt_repository:
+- name: Add Docker's official APT repository
+  ansible.builtin.apt_repository:
     repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu noble stable
     state: present
     filename: docker
-  become: true
+  become: yes
 
-- name: install docker
-  apt:
+- name: Install Docker
+  ansible.builtin.apt:
     name:
       - docker-ce
       - docker-ce-cli
@@ -20,55 +20,55 @@
       - docker-buildx-plugin
       - docker-compose-plugin
     state: present
-    update_cache: true
+    update_cache: yes
   notify: restart docker
-  become: true
+  become: yes
 
 - name: Add user to docker group
   ansible.builtin.user:
     name: ubuntu
     groups: docker
     append: yes
-  become: true
+  become: yes
 
-- name: restart docker after adding user to group
-  systemd:
-    name: docker
-    state: restarted
-  become: true
+- name: Reset SSH connection to allow user changes to affect the current session
+  ansible.builtin.meta: reset_connection
 
-- name: reset ssh connection to allow user groups to affect the current session
-  meta: reset_connection
 
-- name: create /etc/docker directory
-  become: true
-  file:
+- name: Create /etc/docker directory
+  become: yes
+  ansible.builtin.file:
     path: /etc/docker
     state: directory
     owner: root
     group: root
-    mode: '0755'
+    mode: '755'
 
-- name: create /etc/docker/daemon.json
-  become: true
-  copy: 
+
+- name: Create /etc/docker/daemon.json
+  become: yes
+  ansible.builtin.copy:
     src: files/daemon.json
     dest: /etc/docker/daemon.json
     owner: root
     group: root
-    mode: '0644'
-  notify: restart docker 
+    mode: '644'
+  notify: restart docker
 
-- name: ensure that docker start and enabled at boot
-  systemd:
+
+- name: Ensure Docker is started and enabled at boot
+  become: yes
+  ansible.builtin.systemd:
     name: docker
-    state: started
     enabled: yes
-  become: true
+    state: started
 
-- name: install python docker sdk
-  become: true
-  apt:
+
+- name: Install Python Docker SDK
+  become: yes 
+  ansible.builtin.apt:
     name: python3-docker
     state: present
     update_cache: yes
+
+

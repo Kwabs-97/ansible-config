@@ -4,14 +4,15 @@
 # GNU General Public License v3.0+ (see LICENSES/GPL-3.0-or-later.txt or https://www.gnu.org/licenses/gpl-3.0.txt)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from __future__ import (absolute_import, division, print_function)
+from __future__ import absolute_import, division, print_function
+
+
 __metaclass__ = type
 
 
 import abc
 
 from ansible.module_utils import six
-
 from ansible_collections.community.dns.plugins.module_utils.zone import (
     DNSZoneWithRecords,
 )
@@ -44,11 +45,11 @@ class ZoneRecordAPI(object):
         """
 
     @abc.abstractmethod
-    def get_zone_by_id(self, id):
+    def get_zone_by_id(self, zone_id):
         """
         Given a zone ID, return the zone contents if found.
 
-        @param id: The zone ID
+        @param zone_id: The zone ID
         @return The zone information (DNSZone), or None if not found
         """
 
@@ -67,7 +68,7 @@ class ZoneRecordAPI(object):
             return None
         return DNSZoneWithRecords(zone, self.get_zone_records(zone.id, prefix=prefix, record_type=record_type))
 
-    def get_zone_with_records_by_id(self, id, prefix=NOT_PROVIDED, record_type=NOT_PROVIDED):
+    def get_zone_with_records_by_id(self, zone_id, prefix=NOT_PROVIDED, record_type=NOT_PROVIDED):
         """
         Given a zone ID, return the zone contents with records if found.
 
@@ -77,7 +78,7 @@ class ZoneRecordAPI(object):
         @param record_type: The record type to filter for, if provided
         @return The zone information with records (DNSZoneWithRecords), or None if not found
         """
-        zone = self.get_zone_by_id(id)
+        zone = self.get_zone_by_id(zone_id)
         if zone is None:
             return None
         return DNSZoneWithRecords(zone, self.get_zone_records(zone.id, prefix=prefix, record_type=record_type))

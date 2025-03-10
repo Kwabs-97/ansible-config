@@ -1,5 +1,6 @@
 - name: restart systemd-networkd
-  ansible.builtin.systemd_service:
+  systemd:
     name: systemd-networkd
     state: restarted
-  become: true
+  when: netdev_config.changed or network_config.changed
+  become: yes
