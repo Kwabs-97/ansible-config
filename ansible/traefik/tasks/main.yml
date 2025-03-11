@@ -1,0 +1,15 @@
+- name: create services directory
+  file:
+    path: /home/ubuntu/services
+    state: directory
+    mode: '700'
+  become: yes
+
+- name: copy traefik service folder
+  ansible.builtin.copy:
+    src: traefik
+    dest: /home/ubuntu/services
+    owner: ubuntu
+    group: ubuntu
+    mode: '700'
+  become: yes

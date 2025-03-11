@@ -1,0 +1,17 @@
+services:
+  traefik:
+    container_name: ${TRAEFIK_CONTAINER_NAME}
+    hostname: ${TRAEFIK_HOSTNAME}
+    image: ${TRAEFIK_IMAGE}:${TRAEFIK_VERSION}
+    restart: unless-stopped
+    networks:
+      - web
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./configs:/configs/"
+      - "${TRAEFIK_CERT_DIR}:/certs:ro"
+    command: 
+ 
